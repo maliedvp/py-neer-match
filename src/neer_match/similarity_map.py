@@ -10,6 +10,16 @@ import numpy
 import typing
 
 
+def notmissing(x, y) -> float:
+    """0 if either one of None, np.nan, pd.nan or '' appears."""
+    return 1.0 if x and y and not (isinstance(x, (float, int)) and numpy.isnan(x)) and not (isinstance(y, (float, int)) and numpy.isnan(y)) else 0.0
+
+
+def notzero(x, y) -> float:
+    """0 if either one of None, np.nan, pd.nan or '' appears."""
+    return 1.0 if x and y and not any(i==0 for i in (x,y))else 0.0
+
+
 def discrete(
     x: typing.Union[int, str, typing.AnyStr], y: typing.Union[int, str, typing.AnyStr]
 ) -> float:
@@ -41,6 +51,8 @@ def available_similarities() -> typing.Dict[str, typing.Callable]:
         "jaro_winkler": distance.JaroWinkler.normalized_similarity,
         "lcsseq": distance.LCSseq.normalized_similarity,
         "levenshtein": distance.Levenshtein.normalized_similarity,
+        "notmissing": notmissing,
+        "notzero": notzero,
         "osa": distance.OSA.normalized_similarity,
         "partial_ratio": fuzz.partial_ratio,
         "partial_ratio_alignment": fuzz.partial_ratio_alignment,
