@@ -228,7 +228,7 @@ class DLMatchingModel(tf.keras.Model):
         return self.record_pair_network.similarity_map
 
 
-class NSMatchingModel:
+class NSMatchingModel(tf.keras.Model):
     """A neural-symbolic matching model class.
 
     Attributes:
@@ -246,6 +246,7 @@ class NSMatchingModel:
         feature_depths: typing.Union[int, typing.List[int]] = 2,
         initial_record_width_scale: int = 10,
         record_depth: int = 4,
+        **kwargs,
     ) -> None:
         """Initialize a neural-symbolic matching learning matching model.
 
@@ -266,6 +267,7 @@ class NSMatchingModel:
             initial_record_width_scale: The initial width scale of the record network.
             record_depth: The depth of the record network.
         """
+        super().__init__(**kwargs)
         self.record_pair_network = RecordPairNetwork(
             similarity_map,
             initial_feature_width_scales=initial_feature_width_scales,
@@ -530,6 +532,19 @@ class NSMatchingModel:
             data_generator, loss_clb, trainable_variables, epochs, verbose, log_mod_n
         )
 
+    def compile_as_DL(
+        self,
+        optimizer = None,
+        loss = tf.keras.losses.BinaryCrossentropy(),
+        metrics = ['accuracy', 'precision', 'recall'],
+        **kwargs,
+    ):
+        super().compile(optimizer=optimizer, loss=loss, metrics=metrics, **kwargs)
+
+    def call(self, inputs: typing.Dict[str, tf.Tensor]) -> tf.Tensor:
+        """Call the model on inputs."""
+        return self.record_pair_network(inputs)
+        
     def evaluate(
         self,
         left: pd.DataFrame,
@@ -538,6 +553,8 @@ class NSMatchingModel:
         batch_size: int = 16,
         mismatch_share: float = 1.0,
         satisfiability_weight: float = 1.0,
+        use_axioms: bool = True,
+        **kwargs,
     ) -> dict:
         """Evaluate the model.
 
@@ -552,6 +569,8 @@ class NSMatchingModel:
             batch_size: Batch size.
             mismatch_share: The mismatch share.
             satisfiability_weight: The weight of the satisfiability loss.
+            use_axioms: Indicator if satisfiability score should be calculated.
+            **kwargs: Additional keyword arguments for `super().evaluate`.
         """
         data_generator = DataGenerator(
             self.record_pair_network.similarity_map,
@@ -563,33 +582,38 @@ class NSMatchingModel:
             shuffle=False,
         )
 
-        axioms = self._make_axioms(data_generator)
-        loss_clb = self.__make_loss(axioms, satisfiability_weight)
+        if not use_axioms:
+            self.compile_as_DL()
+            return super().evaluate(data_generator, return_dict = True, **kwargs)
 
-        trainable_variables = self.record_pair_network.trainable_variables
-        logs = self.__for_epoch(
-            data_generator,
-            loss_clb,
-            trainable_variables,
-            verbose=1,
-        )
+        else:
+            axioms = self._make_axioms(data_generator)
+            loss_clb = self.__make_loss(axioms, satisfiability_weight)
 
-        tp = logs["TP"]
-        fp = logs["FP"]
-        tn = logs["TN"]
-        fn = logs["FN"]
-        logs["Accuracy"] = (tp + tn) / (tp + tn + fp + fn)
-        logs["Recall"] = tp / (tp + fn)
-        logs["Precision"] = tp / (tp + fp)
-        logs["F1"] = (
-            2.0
-            * logs["Precision"]
-            * logs["Recall"]
-            / (logs["Precision"] + logs["Recall"])
-        )
-        return {
-            key: value.numpy() for key, value in logs.items() if key != "no_batches"
-        }
+            trainable_variables = self.record_pair_network.trainable_variables
+            logs = self.__for_epoch(
+                data_generator,
+                loss_clb,
+                trainable_variables,
+                verbose=1,
+            )
+
+            tp = logs["TP"]
+            fp = logs["FP"]
+            tn = logs["TN"]
+            fn = logs["FN"]
+            logs["Accuracy"] = (tp + tn) / (tp + tn + fp + fn)
+            logs["Recall"] = tp / (tp + fn)
+            logs["Precision"] = tp / (tp + fp)
+            logs["F1"] = (
+                2.0
+                * logs["Precision"]
+                * logs["Recall"]
+                / (logs["Precision"] + logs["Recall"])
+            )
+            return {
+                key: value.numpy() for key, value in logs.items() if key != "no_batches"
+            }
 
     def predict_from_generator(self, generator: DataGenerator) -> tf.Tensor:
         """Generate model predictions from a generator.
