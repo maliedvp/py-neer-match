@@ -141,30 +141,42 @@ class DLMatchingModel(tf.keras.Model):
         left: pd.DataFrame,
         right: pd.DataFrame,
         matches: pd.DataFrame,
+        batch_size: int = 16,
+        mismatch_share: float = 1.0,
         **kwargs,
     ) -> dict:
-        """Evaluate the model.
-
-        Construct a data generator from the input data frames using the
-        similarity map with which the model was initialized and evaluate the model.
-        The model is evaluated by calling the :func:`tensorflow.keras.Model.evaluate`
-
-        Args:
-            left: The left data frame.
-            right: The right data frame.
-            matches: The matches data frame.
-            **kwargs: Additional keyword arguments passed to parent class
-                      (:func:`tensorflow.keras.Model.evaluate`).
-        """
+        """Evaluate the model and return detailed metrics."""
         generator = DataGenerator(
             self.record_pair_network.similarity_map,
             left,
             right,
             matches,
-            mismatch_share=1.0,
+            mismatch_share=mismatch_share,
+            batch_size=batch_size,
             shuffle=False,
         )
-        return super().evaluate(generator, **kwargs)
+        
+        # Base evaluation to get loss
+        logs = super().evaluate(generator, return_dict=True, **kwargs)
+        
+        # Generate predictions for detailed metrics
+        predictions = self.predict_from_generator(generator)
+        true_labels = matches.values.flatten()  # Assuming matches is a single column
+       
+        tp = ((predictions.round() == 1) & (true_labels == 1)).sum()
+        fp = ((predictions.round() == 1) & (true_labels == 0)).sum()
+        tn = ((predictions.round() == 0) & (true_labels == 0)).sum()
+        fn = ((predictions.round() == 0) & (true_labels == 1)).sum()
+
+        # Add metrics
+        logs.update({
+            "Accuracy": (tp + tn) / (tp + tn + fp + fn),
+            "Recall": tp / (tp + fn),
+            "Precision": tp / (tp + fp),
+            "F1": 2 * tp / (2 * tp + fp + fn),
+        })
+
+        return logs
 
     def predict_from_generator(self, generator: DataGenerator, **kwargs) -> tf.Tensor:
         """Generate model predictions from a generator.
