@@ -98,6 +98,29 @@ class DLMatchingModel(tf.keras.Model):
         """Call the model on inputs."""
         return self.record_pair_network(inputs)
 
+    def compile(self, optimizer=None, loss=None, metrics=None, **kwargs):
+        """
+        Compile the model with the desired loss, optimizer, and metrics.
+
+        Args:
+            optimizer: The optimizer to use.
+            loss: The loss function to use.
+            metrics: A list of metrics to compute during evaluation.
+            **kwargs: Additional arguments for tf.keras.Model.compile.
+        """
+        if optimizer is None:
+            optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
+        if loss is None:
+            loss = tf.keras.losses.BinaryCrossentropy()
+        if metrics is None:
+            metrics = [
+                tf.keras.metrics.BinaryAccuracy(name="accuracy"),
+                tf.keras.metrics.Precision(name="precision"),
+                tf.keras.metrics.Recall(name="recall"),
+            ]
+        
+        super().compile(optimizer=optimizer, loss=loss, metrics=metrics, **kwargs)
+
     def fit(
         self,
         left: pd.DataFrame,
@@ -145,7 +168,8 @@ class DLMatchingModel(tf.keras.Model):
         mismatch_share: float = 1.0,
         **kwargs,
     ) -> dict:
-        """Evaluate the model and return detailed metrics."""
+        """Evaluate the model using predefined metrics."""
+        # Create the data generator
         generator = DataGenerator(
             self.record_pair_network.similarity_map,
             left,
@@ -155,28 +179,10 @@ class DLMatchingModel(tf.keras.Model):
             batch_size=batch_size,
             shuffle=False,
         )
-        
-        # Base evaluation to get loss
-        logs = super().evaluate(generator, return_dict=True, **kwargs)
-        
-        # Generate predictions for detailed metrics
-        predictions = self.predict_from_generator(generator)
-        true_labels = matches.values.flatten()  # Assuming matches is a single column
-       
-        tp = ((predictions.round() == 1) & (true_labels == 1)).sum()
-        fp = ((predictions.round() == 1) & (true_labels == 0)).sum()
-        tn = ((predictions.round() == 0) & (true_labels == 0)).sum()
-        fn = ((predictions.round() == 0) & (true_labels == 1)).sum()
 
-        # Add metrics
-        logs.update({
-            "Accuracy": (tp + tn) / (tp + tn + fp + fn),
-            "Recall": tp / (tp + fn),
-            "Precision": tp / (tp + fp),
-            "F1": 2 * tp / (2 * tp + fp + fn),
-        })
+        # Evaluate and return metrics directly
+        return super().evaluate(generator, return_dict=True, **kwargs)
 
-        return logs
 
     def predict_from_generator(self, generator: DataGenerator, **kwargs) -> tf.Tensor:
         """Generate model predictions from a generator.
