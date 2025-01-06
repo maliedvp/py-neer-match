@@ -176,18 +176,26 @@ class RecordPairNetwork(tf.keras.Model):
         """Get the weights of all layers in the network."""
         weights = []
         for field_network in self.field_networks:
-            weights.extend(field_network.get_weights())
+            field_weights = field_network.get_weights()
+            print(f"Field Network Weights: {[w.shape for w in field_weights]}")
+            weights.extend(field_weights)
         for layer in self.record_layers:
-            weights.extend(layer.get_weights())
+            layer_weights = layer.get_weights()
+            print(f"Record Layer Weights: {[w.shape for w in layer_weights]}")
+            weights.extend(layer_weights)
         return weights
 
     def get_biases(self) -> typing.List[tf.Tensor]:
         """Get the biases of all layers in the network."""
         biases = []
         for field_network in self.field_networks:
-            biases.extend([weight for weight in field_network.get_weights() if len(weight.shape) == 1])
+            field_biases = [w for w in field_network.get_weights() if len(w.shape) == 1]
+            print(f"Field Network Biases: {[b.shape for b in field_biases]}")
+            biases.extend(field_biases)
         for layer in self.record_layers:
-            biases.extend([weight for weight in layer.get_weights() if len(weight.shape) == 1])
+            layer_biases = [w for w in layer.get_weights() if len(w.shape) == 1]
+            print(f"Record Layer Biases: {[b.shape for b in layer_biases]}")
+            biases.extend(layer_biases)
         return biases
 
     def set_weights(self, weights: typing.List[tf.Tensor]) -> None:
