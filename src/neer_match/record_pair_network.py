@@ -221,24 +221,42 @@ class RecordPairNetwork(tf.keras.Model):
         bias_index = 0
         for field_network in self.field_networks:
             weights = field_network.get_weights()
+            # Extract biases from weights
             num_biases = sum(1 for w in weights if len(w.shape) == 1)
             print(f"Setting biases for {field_network.name}: Expected {num_biases}, "
                   f"Shapes {[w.shape for w in weights if len(w.shape) == 1]}, "
                   f"Provided {[b.shape for b in biases[bias_index:bias_index + num_biases]]}")
-            field_network.set_weights(
-                [w if len(w.shape) != 1 else biases[bias_index + i]
-                 for i, w in enumerate(weights)]
-            )
-            bias_index += num_biases
+            
+            # Replace only the biases
+            updated_weights = []
+            for w in weights:
+                if len(w.shape) == 1:  # It's a bias
+                    updated_weights.append(biases[bias_index])
+                    bias_index += 1
+                else:
+                    updated_weights.append(w)  # Keep the original weight
+            
+            # Set the updated weights back
+            field_network.set_weights(updated_weights)
+        
         for layer in self.record_layers:
             weights = layer.get_weights()
+            # Extract biases from weights
             num_biases = sum(1 for w in weights if len(w.shape) == 1)
             print(f"Setting biases for {layer.name}: Expected {num_biases}, "
                   f"Shapes {[w.shape for w in weights if len(w.shape) == 1]}, "
                   f"Provided {[b.shape for b in biases[bias_index:bias_index + num_biases]]}")
-            layer.set_weights(
-                [w if len(w.shape) != 1 else biases[bias_index + i]
-                 for i, w in enumerate(weights)]
-            )
-            bias_index += num_biases
+            
+            # Replace only the biases
+            updated_weights = []
+            for w in weights:
+                if len(w.shape) == 1:  # It's a bias
+                    updated_weights.append(biases[bias_index])
+                    bias_index += 1
+                else:
+                    updated_weights.append(w)  # Keep the original weight
+            
+            # Set the updated weights back
+            layer.set_weights(updated_weights)
+
 
