@@ -203,10 +203,16 @@ class RecordPairNetwork(tf.keras.Model):
         weight_index = 0
         for field_network in self.field_networks:
             num_weights = len(field_network.get_weights())
+            print(f"Setting weights for {field_network.name}: Expected {num_weights}, "
+                  f"Shapes {[w.shape for w in field_network.get_weights()]}, "
+                  f"Provided {[w.shape for w in weights[weight_index:weight_index + num_weights]]}")
             field_network.set_weights(weights[weight_index:weight_index + num_weights])
             weight_index += num_weights
         for layer in self.record_layers:
             num_weights = len(layer.get_weights())
+            print(f"Setting weights for {layer.name}: Expected {num_weights}, "
+                  f"Shapes {[w.shape for w in layer.get_weights()]}, "
+                  f"Provided {[w.shape for w in weights[weight_index:weight_index + num_weights]]}")
             layer.set_weights(weights[weight_index:weight_index + num_weights])
             weight_index += num_weights
 
@@ -216,6 +222,9 @@ class RecordPairNetwork(tf.keras.Model):
         for field_network in self.field_networks:
             weights = field_network.get_weights()
             num_biases = sum(1 for w in weights if len(w.shape) == 1)
+            print(f"Setting biases for {field_network.name}: Expected {num_biases}, "
+                  f"Shapes {[w.shape for w in weights if len(w.shape) == 1]}, "
+                  f"Provided {[b.shape for b in biases[bias_index:bias_index + num_biases]]}")
             field_network.set_weights(
                 [w if len(w.shape) != 1 else biases[bias_index + i]
                  for i, w in enumerate(weights)]
@@ -224,8 +233,12 @@ class RecordPairNetwork(tf.keras.Model):
         for layer in self.record_layers:
             weights = layer.get_weights()
             num_biases = sum(1 for w in weights if len(w.shape) == 1)
+            print(f"Setting biases for {layer.name}: Expected {num_biases}, "
+                  f"Shapes {[w.shape for w in weights if len(w.shape) == 1]}, "
+                  f"Provided {[b.shape for b in biases[bias_index:bias_index + num_biases]]}")
             layer.set_weights(
                 [w if len(w.shape) != 1 else biases[bias_index + i]
                  for i, w in enumerate(weights)]
             )
             bias_index += num_biases
+
