@@ -222,6 +222,22 @@ class DLMatchingModel(tf.keras.Model):
         """
         return _suggest(self, left, right, count, batch_size=batch_size, **kwargs)
 
+    def get_weights(self) -> typing.List[tf.Tensor]:
+        """Get the weights of the underlying record pair network."""
+        return self.record_pair_network.get_weights()
+
+    def get_biases(self) -> typing.List[tf.Tensor]:
+        """Get the biases of the underlying record pair network."""
+        return self.record_pair_network.get_biases()
+
+    def set_weights(self, weights: typing.List[tf.Tensor]) -> None:
+        """Set the weights for the underlying record pair network."""
+        self.record_pair_network.set_weights(weights)
+
+    def set_biases(self, biases: typing.List[tf.Tensor]) -> None:
+        """Set the biases for the underlying record pair network."""
+        self.record_pair_network.set_biases(biases)
+
     @property
     def similarity_map(self) -> SimilarityMap:
         """Similarity Map of the Model."""
@@ -642,6 +658,22 @@ class NSMatchingModel:
             batch_size: Batch size.
         """
         return _suggest(self, left, right, count, batch_size=batch_size)
+
+    def get_weights(self) -> typing.List[tf.Tensor]:
+        """Get the weights of the underlying record pair network."""
+        return self.record_pair_network.get_weights()
+
+    def get_biases(self) -> typing.List[tf.Tensor]:
+        """Get the biases of the underlying record pair network."""
+        return self.record_pair_network.get_biases()
+
+    def set_weights(self, weights: typing.List[tf.Tensor]) -> None:
+        """Set the weights for the underlying record pair network."""
+        self.record_pair_network.set_weights(weights)
+
+    def set_biases(self, biases: typing.List[tf.Tensor]) -> None:
+        """Set the biases for the underlying record pair network."""
+        self.record_pair_network.set_biases(biases)
 
     @property
     def similarity_map(self) -> SimilarityMap:

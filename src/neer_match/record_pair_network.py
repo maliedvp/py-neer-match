@@ -171,3 +171,53 @@ class RecordPairNetwork(tf.keras.Model):
         for layer in self.record_layers:
             output = layer(output)
         return output
+
+    def get_weights(self) -> typing.List[tf.Tensor]:
+        """Get the weights of all layers in the network."""
+        weights = []
+        for field_network in self.field_networks:
+            weights.extend(field_network.get_weights())
+        for layer in self.record_layers:
+            weights.extend(layer.get_weights())
+        return weights
+
+    def get_biases(self) -> typing.List[tf.Tensor]:
+        """Get the biases of all layers in the network."""
+        biases = []
+        for field_network in self.field_networks:
+            biases.extend([weight for weight in field_network.get_weights() if len(weight.shape) == 1])
+        for layer in self.record_layers:
+            biases.extend([weight for weight in layer.get_weights() if len(weight.shape) == 1])
+        return biases
+
+    def set_weights(self, weights: typing.List[tf.Tensor]) -> None:
+        """Set the weights of all layers in the network."""
+        weight_index = 0
+        for field_network in self.field_networks:
+            num_weights = len(field_network.get_weights())
+            field_network.set_weights(weights[weight_index:weight_index + num_weights])
+            weight_index += num_weights
+        for layer in self.record_layers:
+            num_weights = len(layer.get_weights())
+            layer.set_weights(weights[weight_index:weight_index + num_weights])
+            weight_index += num_weights
+
+    def set_biases(self, biases: typing.List[tf.Tensor]) -> None:
+        """Set the biases of all layers in the network."""
+        bias_index = 0
+        for field_network in self.field_networks:
+            weights = field_network.get_weights()
+            num_biases = sum(1 for w in weights if len(w.shape) == 1)
+            field_network.set_weights(
+                [w if len(w.shape) != 1 else biases[bias_index + i]
+                 for i, w in enumerate(weights)]
+            )
+            bias_index += num_biases
+        for layer in self.record_layers:
+            weights = layer.get_weights()
+            num_biases = sum(1 for w in weights if len(w.shape) == 1)
+            layer.set_weights(
+                [w if len(w.shape) != 1 else biases[bias_index + i]
+                 for i, w in enumerate(weights)]
+            )
+            bias_index += num_biases
