@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+_EPS = 1e-8
+
 # Helper functions
 
 def _prep(y_true, y_pred):
@@ -29,7 +31,7 @@ class PrecisionMetric(tf.keras.metrics.Metric):
         self.fp.assign_add(tf.reduce_sum(y_hat * (1.0 - y_true)))
 
     def result(self):
-        return self.tp / (self.tp + self.fp)
+        return self.tp / (self.tp + self.fp + _EPS)
 
     def reset_states(self):
         self.tp.assign(0.0); self.fp.assign(0.0)
@@ -48,7 +50,7 @@ class RecallMetric(tf.keras.metrics.Metric):
         self.fn.assign_add(tf.reduce_sum((1.0 - y_hat) * y_true))
 
     def result(self):
-        return self.tp / (self.tp + self.fn)
+        return self.tp / (self.tp + self.fn + _EPS)
 
     def reset_states(self):
         self.tp.assign(0.0); self.fn.assign(0.0)
@@ -71,7 +73,7 @@ class AccuracyMetric(tf.keras.metrics.Metric):
         self.fn.assign_add(tf.reduce_sum((1.0 - y_hat) * y_true))
 
     def result(self):
-        return (self.tp + self.tn) / (self.tp + self.fp + self.tn + self.fn)
+        return (self.tp + self.tn) / (self.tp + self.fp + self.tn + self.fn + _EPS)
 
     def reset_states(self):
         self.tp.assign(0.0); self.fp.assign(0.0); self.tn.assign(0.0); self.fn.assign(0.0)
@@ -92,7 +94,7 @@ class F1Metric(tf.keras.metrics.Metric):
         self.fn.assign_add(tf.reduce_sum((1.0 - y_hat) * y_true))
 
     def result(self):
-        return (2.0 * self.tp) / (2.0 * self.tp + self.fp + self.fn)
+        return (2.0 * self.tp) / (2.0 * self.tp + self.fp + self.fn + _EPS)
 
     def reset_states(self):
         self.tp.assign(0.0); self.fp.assign(0.0); self.fn.assign(0.0)
@@ -122,7 +124,7 @@ class MCCMetric(tf.keras.metrics.Metric):
             * (self.tn + self.fp)
             * (self.tn + self.fn)
         )
-        return num / den
+        return num / (den + _EPS)
 
     def reset_states(self):
         self.tp.assign(0.0); self.fp.assign(0.0); self.tn.assign(0.0); self.fn.assign(0.0)
